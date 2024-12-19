@@ -1,19 +1,6 @@
 package org.example.dataexchangesystem.model;
 
-import jakarta.persistence.*;
-import lombok.*;
-
-@Getter
-@Setter
-@ToString
-@NoArgsConstructor
-@AllArgsConstructor
-@Entity
-@Table
-public class Users {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+public class UsersDTO {
     private String username;
     private String password;
 
@@ -32,13 +19,4 @@ public class Users {
     public void setPassword(String password) {
         this.password = password;
     }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
 }
-

@@ -1,5 +1,6 @@
-package org.example.dataexchangesystem;
+package org.example.dataexchangesystem.security;
 
+import org.example.dataexchangesystem.service.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,20 +12,20 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig {
+public class SecurityConfig{
 
     @Autowired
     private JwtFilter jwtFilter;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -41,6 +42,8 @@ public class SecurityConfig {
         return http.build();
     }
 
+
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -50,22 +53,22 @@ public class SecurityConfig {
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 
-        provider.setUserDetailsService(userDetailsService());
+        provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(new BCryptPasswordEncoder(12));
 
         return provider;
     }
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails user1 = User.builder()
-                .username("kacper")
-                .password(new BCryptPasswordEncoder(12).encode("1234"))
-                .roles("USER")
-                .build();
-
-        return new InMemoryUserDetailsManager(user1);
-    }
+//    @Bean
+//    public UserDetailsService userDetailsService() {
+//        UserDetails user1 = User.builder()
+//                .username("kacper")
+//                .password(new BCryptPasswordEncoder(12).encode("1234"))
+//                .roles("USER")
+//                .build();
+//
+//        return new InMemoryUserDetailsManager(user1);
+//    }
 
 
 
