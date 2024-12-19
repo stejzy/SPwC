@@ -6,6 +6,7 @@ import org.example.dataexchangesystem.model.Users;
 import org.example.dataexchangesystem.model.UsersDTO;
 import org.example.dataexchangesystem.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -55,6 +56,16 @@ public class UsersController {
     @GetMapping( "/files")
     public List<AzureFileStorageClient.BlobInfo> getFiles() {
         return azureFileStorageClient.getAllBlobInfo("file-container");
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<String> registerUser(@RequestBody UsersDTO user) {
+        try {
+            userService.registerUser(user);
+            return ResponseEntity.ok("User registered successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
 
