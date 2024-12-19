@@ -1,5 +1,6 @@
 package org.example.dataexchangesystem.controller;
 
+import org.example.dataexchangesystem.azure.AzureFileStorageClient;
 import org.example.dataexchangesystem.azure.FileStorageClient;
 import org.example.dataexchangesystem.model.Users;
 import org.example.dataexchangesystem.model.UsersDTO;
@@ -10,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 @RestController
 public class UsersController {
@@ -19,6 +21,9 @@ public class UsersController {
 
     @Autowired
     private FileStorageClient fileStorageClient;
+
+    @Autowired
+    private AzureFileStorageClient azureFileStorageClient;
 
     @GetMapping("/hello")
     public String hello() {
@@ -45,7 +50,11 @@ public class UsersController {
         try(InputStream inputStream = file.getInputStream()) {
             return this.fileStorageClient.uploadFile(containerName, file.getOriginalFilename(), inputStream, file.getSize());
         }
+    }
 
+    @GetMapping( "/files")
+    public List<AzureFileStorageClient.BlobInfo> getFiles() {
+        return azureFileStorageClient.getAllBlobInfo("file-container");
     }
 }
 

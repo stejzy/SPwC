@@ -19,18 +19,6 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    private final String secretKey;
-
-    public JwtService() {
-        try {
-            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
-            SecretKey sk = keyGen.generateKey();
-            secretKey = Base64.getEncoder().encodeToString(sk.getEncoded());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
 
@@ -46,6 +34,7 @@ public class JwtService {
     }
 
     private SecretKey getKey() {
+        String secretKey = "foMi21k/d0WlP6IlXq4av5juEAHk4eIthWUKLQTYP5s=";
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }

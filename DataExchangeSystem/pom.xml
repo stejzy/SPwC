@@ -48,11 +48,11 @@
             <artifactId>spring-cloud-azure-starter-storage-blob</artifactId>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>com.azure</groupId>-->
-<!--            <artifactId>azure-storage-blob</artifactId>-->
-<!--            <version>12.21.0</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob</artifactId>
+            <version>12.21.0</version>
+        </dependency>
 
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
