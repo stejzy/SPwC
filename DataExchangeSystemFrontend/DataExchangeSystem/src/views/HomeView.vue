@@ -13,7 +13,7 @@ export default {
       try {
         const response = await axios.get("http://localhost:8080/files", {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`
           }
         });
         this.files = response.data;

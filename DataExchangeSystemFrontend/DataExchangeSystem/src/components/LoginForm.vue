@@ -48,9 +48,7 @@ export default {
     async LoginSubmit() {
       try {
         const token = await this.authenticate(this.username, this.password);
-        console.log(token);
         if (token) {
-          console.log(token);
           this.$emit('login', token);
         }
       } catch (e) {
