@@ -1,10 +1,11 @@
 <script setup>
-import LoginForm from "@/components/LoginForm.vue";
+import SendForm from '@/components/SendForm.vue'
 </script>
 
 <template>
-  <LoginForm />
+  <SendForm />
 </template>
 
 <style scoped>
+
 </style>
