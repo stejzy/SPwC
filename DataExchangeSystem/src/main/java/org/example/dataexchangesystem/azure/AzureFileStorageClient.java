@@ -4,13 +4,14 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
+import org.apache.tomcat.util.http.fileupload.FileUploadException;
+import org.example.dataexchangesystem.model.BlobDTO;
+import org.example.dataexchangesystem.model.Users;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class AzureFileStorageClient implements FileStorageClient {
@@ -24,48 +25,35 @@ public class AzureFileStorageClient implements FileStorageClient {
 
 
     @Override
-    public String uploadFile(String containerName, String orginalFileName, InputStream inputStream, long length) throws IOException {
+    public BlobDTO uploadFile(String containerName, String originalFileName, InputStream inputStream, long length) throws FileUploadException {
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
-        String newFileName = UUID.randomUUID().toString() + orginalFileName.substring(orginalFileName.lastIndexOf("."));
+        BlobClient blobClient = blobContainerClient.getBlobClient(originalFileName);
+        if (blobClient.exists()) {
+            throw new IllegalArgumentException("A file with the name " + originalFileName + " already exists in the container.");
+        }
 
-        BlobClient blobClient = blobContainerClient.getBlobClient(newFileName);
+        try {
+            blobClient.upload(inputStream, length, true);
+        } catch (Exception e) {
+            throw new FileUploadException("Failed to upload file due to unknown error: " + e.getMessage(), e);
+        }
 
-        blobClient.upload(inputStream, length, true);
-
-        return blobClient.getBlobUrl();
+        return new BlobDTO(blobClient.getBlobUrl(), originalFileName);
     }
 
-    public List<BlobInfo> getAllBlobInfo(String containerName) {
+    public List<BlobDTO> getAllBlobInfo(String containerName) {
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
-        List<BlobInfo> blobInfoList = new ArrayList<>();
+        List<BlobDTO> blobDTOList = new ArrayList<>();
 
         for (BlobItem blobItem : blobContainerClient.listBlobs()) {
             String blobName = blobItem.getName();
             String blobUrl = blobContainerClient.getBlobClient(blobName).getBlobUrl();
 
-            blobInfoList.add(new BlobInfo(blobName, blobUrl));
+            blobDTOList.add(new BlobDTO(blobName, blobUrl));
         }
 
-        return blobInfoList;
-    }
-
-    public static class BlobInfo {
-        private String blobName;
-        private String blobUrl;
-
-        public BlobInfo(String blobName, String blobUrl) {
-            this.blobName = blobName;
-            this.blobUrl = blobUrl;
-        }
-
-        public String getBlobName() {
-            return blobName;
-        }
-
-        public String getBlobUrl() {
-            return blobUrl;
-        }
+        return blobDTOList;
     }
 }

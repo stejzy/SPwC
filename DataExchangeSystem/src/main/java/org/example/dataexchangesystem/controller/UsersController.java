@@ -2,6 +2,7 @@ package org.example.dataexchangesystem.controller;
 
 import org.example.dataexchangesystem.azure.AzureFileStorageClient;
 import org.example.dataexchangesystem.azure.FileStorageClient;
+import org.example.dataexchangesystem.model.BlobDTO;
 import org.example.dataexchangesystem.model.Users;
 import org.example.dataexchangesystem.model.UsersDTO;
 import org.example.dataexchangesystem.service.UsersService;
@@ -20,12 +21,6 @@ public class UsersController {
     @Autowired
     private UsersService userService;
 
-    @Autowired
-    private FileStorageClient fileStorageClient;
-
-    @Autowired
-    private AzureFileStorageClient azureFileStorageClient;
-
     @GetMapping("/hello")
     public String hello() {
         return "Hello World";
@@ -36,36 +31,32 @@ public class UsersController {
         return "Welcome to our page";
     }
 
-    @PostMapping("/api/login")
-    public String login(@RequestBody Users user) {
-        return userService.verify(user);
-    }
-
-    @PostMapping("/addUser")
-    public Users addUser(@RequestBody UsersDTO userDTO) {
-        return userService.addUser(userDTO);
-    }
-
-    @PostMapping( "/uploadFile")
-    public String uploadFile(@RequestParam String containerName, MultipartFile file) throws IOException {
-        try(InputStream inputStream = file.getInputStream()) {
-            return this.fileStorageClient.uploadFile(containerName, file.getOriginalFilename(), inputStream, file.getSize());
-        }
-    }
-
-    @GetMapping( "/files")
-    public List<AzureFileStorageClient.BlobInfo> getFiles() {
-        return azureFileStorageClient.getAllBlobInfo("file-container");
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody UsersDTO user) {
+        return ResponseEntity.ok(userService.login(user));
     }
 
     @PostMapping("/register")
     public ResponseEntity<String> registerUser(@RequestBody UsersDTO user) {
-        try {
-            userService.registerUser(user);
-            return ResponseEntity.ok("User registered successfully");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        userService.registerUser(user);
+        return ResponseEntity.ok("User registered successfully");
     }
+
+//    @PostMapping("/addUser")
+//    public Users addUser(@RequestBody UsersDTO userDTO) {
+//        return userService.addUser(userDTO);
+//    }
+
+    @PostMapping( "/uploadFile")
+    public BlobDTO uploadFile(@RequestParam MultipartFile file, String username) throws IOException {
+        return userService.uploadFile(file, username);
+    }
+
+    @GetMapping( "/files")
+    public List<BlobDTO> getFiles(@RequestParam String username) {
+        return userService.getFiles(username);
+    }
+
+
 }
 

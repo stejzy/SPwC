@@ -1,5 +1,6 @@
 package org.example.dataexchangesystem.service;
 
+import org.example.dataexchangesystem.exception.UserNotFoundException;
 import org.example.dataexchangesystem.model.UserPrincipal;
 import org.example.dataexchangesystem.model.Users;
 import org.example.dataexchangesystem.repository.UsersRepository;
@@ -17,13 +18,11 @@ public class MyUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Users user = usersRepository.findByUsername(username);
-
-        if(user == null) {
-            throw new UsernameNotFoundException("User not found");
-        }
+        Users user = usersRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException("User not found. Login error."));
 
         return new UserPrincipal(user);
     }
+
 
 }
