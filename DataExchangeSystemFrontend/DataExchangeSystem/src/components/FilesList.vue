@@ -6,14 +6,19 @@ import { useAuthStore } from '@/stores/auth.js'
 const authStore = useAuthStore();
 
 const files = ref([]);
+const isLoading = ref(true);
 
 const fetchFiles = async () => {
-  await axios.get('http://localhost:8080/files', {
-    params: { "username": authStore.user.username }
-  })
-    .then(res => files.value = res.data)
-    .catch(error => console.error(error));
-  console.log(files.value);
+  try {
+    const response = await axios.get('http://localhost:8080/files', {
+      params: { "username": authStore.user.username }
+    });
+    files.value = response.data;
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 onMounted(() => {
@@ -23,9 +28,14 @@ onMounted(() => {
 
 <template>
   <div class="container mt-5">
-    <div v-if="files.length === 0" class="alert alert-info text-center">
+    <div v-if="isLoading" class="text-center">
+      <i class="pi pi-spinner pi-spin" style="font-size: 2em;"></i>
+    </div>
+
+    <div v-else-if="files.length === 0" class="alert alert-info text-center">
       Nie przesłałeś jeszcze żadnych plików
     </div>
+
     <table v-else class="table table-striped table-hover">
       <thead class="thead-dark">
       <tr>
