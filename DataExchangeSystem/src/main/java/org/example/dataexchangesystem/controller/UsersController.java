@@ -11,8 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -48,8 +51,30 @@ public class UsersController {
 //    }
 
     @PostMapping( "/uploadFile")
-    public BlobDTO uploadFile(@RequestParam MultipartFile file, String username) throws IOException {
+    public BlobDTO uploadFile(@RequestParam MultipartFile file, String username) throws Exception {
         return userService.uploadFile(file, username);
+    }
+
+    @PostMapping("/uploadFiles")
+    public ResponseEntity<List<BlobDTO>> uploadFiles(@RequestBody List<MultipartFile> files, String username) throws Exception {
+        List<BlobDTO> uploadedFiles = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            BlobDTO blobDTO = userService.uploadFile(file, username);
+            uploadedFiles.add(blobDTO);
+        }
+        return ResponseEntity.ok(uploadedFiles);
+    }
+
+    @PostMapping("/uploadArchive")
+    public ResponseEntity<List<BlobDTO>> uploadArchive(@RequestParam MultipartFile archive, String username) throws Exception {
+        return ResponseEntity.ok(userService.uploadArchive(archive, username));
+    }
+
+    @DeleteMapping("/deleteFile")
+    public ResponseEntity<String> deleteFile(@RequestParam String fileName, @RequestParam String username) throws FileNotFoundException {
+        userService.deleteFile(fileName, username);
+        return ResponseEntity.ok("File " + fileName + " deleted successfully.");
     }
 
     @GetMapping( "/files")

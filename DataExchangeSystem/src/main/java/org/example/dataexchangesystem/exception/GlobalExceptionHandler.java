@@ -34,6 +34,13 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(FileReadException.class)
+    public ResponseEntity<String> handleFileReadException(FileReadException ex) {
+        String errorMessage = "Failed to read file: " + ex.getMessage();
+        return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);  // Użycie kodu 400 dla błędów odczytu
+    }
+
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleGenericException(Exception ex) {
         String errorMessage = "UNEXPECTED ERROR: " + ex.getMessage();

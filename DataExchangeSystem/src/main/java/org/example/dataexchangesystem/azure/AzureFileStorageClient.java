@@ -6,7 +6,6 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
 import org.example.dataexchangesystem.model.BlobDTO;
-import org.example.dataexchangesystem.model.Users;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -39,7 +38,16 @@ public class AzureFileStorageClient implements FileStorageClient {
             throw new FileUploadException("Failed to upload file due to unknown error: " + e.getMessage(), e);
         }
 
-        return new BlobDTO(blobClient.getBlobUrl(), originalFileName);
+        return new BlobDTO(originalFileName, blobClient.getBlobUrl());
+    }
+
+    @Override
+    public void deleteFile(String containerName, String orginalFileName) {
+        BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
+        BlobClient blobClient = blobContainerClient.getBlobClient(orginalFileName);
+        if (blobClient.exists()) {
+            blobClient.delete();
+        }
     }
 
     public List<BlobDTO> getAllBlobInfo(String containerName) {

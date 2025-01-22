@@ -5,7 +5,7 @@ public class BlobDTO {
     private String blobName;
 
     // Konstruktor
-    public BlobDTO(String blobUrl, String blobName) {
+    public BlobDTO(String blobName, String blobUrl) {
         this.blobUrl = blobUrl;
         this.blobName = blobName;
     }

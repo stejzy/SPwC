@@ -10,5 +10,5 @@ import java.io.InputStream;
 public interface FileStorageClient {
 
    BlobDTO uploadFile(String containerName, String orginalFileName, InputStream inputStream, long length) throws IOException;
-
+   void deleteFile(String containerName, String orginalFileName);
 }
