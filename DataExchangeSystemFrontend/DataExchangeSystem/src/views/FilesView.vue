@@ -1,10 +1,12 @@
 <script setup>
-import LoginForm from "@/components/LoginForm.vue";
+
+import FilesList from '@/components/FilesList.vue'
 </script>
 
 <template>
-  <LoginForm />
+  <FilesList />
 </template>
 
 <style scoped>
+
 </style>
