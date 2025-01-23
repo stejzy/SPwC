@@ -12,17 +12,15 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials) {
       try {
         const response = await axios.post('/api/login', credentials);
+
         this.accessToken = response.data;
-        //this.refreshToken = response.data.refreshToken;
 
         const decodedToken = jwtDecode(this.accessToken);
-        console.log(decodedToken.sub);
         const username = decodedToken.sub;
 
         this.user = { username };
 
         localStorage.setItem('accessToken', this.accessToken);
-        // //localStorage.setItem('refreshToken', this.refreshToken);
         localStorage.setItem('user', JSON.stringify(this.user));
 
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.accessToken}`;
@@ -43,35 +41,14 @@ export const useAuthStore = defineStore('auth', {
 
       delete axios.defaults.headers.common['Authorization'];
     },
-    async refreshAccessToken() {
-      try {
-        const response = await axios.post('/api/refresh', {
-          refreshToken: this.refreshToken,
-        });
-        this.accessToken = response.data.accessToken;
-
-        const decodedToken = jwtDecode(this.accessToken);
-        const { username, _id, role } = decodedToken;
-
-        this.user = { username, _id, role };
-
-        axios.defaults.headers.common['Authorization'] = `Bearer ${this.accessToken}`;
-
-        localStorage.setItem('accessToken', this.accessToken);
-      } catch (error) {
-        console.error('Refresh token failed', error);
-        this.logout();
-      }
-    },
     setupAxiosInterceptors() {
       axios.interceptors.response.use(
         response => response,
         async (error) => {
           const originalRequest = error.config;
-          if (error.response && error.response.status === 401 && this.refreshToken) {
+          originalRequest.headers['Authorization'] = `Bearer ${this.accessToken}`;
+          if (error.response && error.response.status === 401 && this.accessToken) {
             try {
-              await this.refreshAccessToken();
-
               originalRequest.headers['Authorization'] = `Bearer ${this.accessToken}`;
               return axios(originalRequest);
             } catch (refreshError) {
@@ -79,7 +56,6 @@ export const useAuthStore = defineStore('auth', {
               return Promise.reject(refreshError);
             }
           }
-
           return Promise.reject(error);
         }
       );
