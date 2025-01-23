@@ -60,7 +60,7 @@ const send = async () => {
       console.error(error);
     }
   } else if (files.value.length === 1) { // JEDEN PLIK
-    formData.append("file", file.value);
+    formData.append("file", files.value[0]);
     formData.append('username', authStore.user.username);
 
     try {

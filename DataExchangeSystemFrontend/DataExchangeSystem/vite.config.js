@@ -13,11 +13,16 @@ export default defineConfig({
   ],
   server: {
     proxy: {
+      '/blob': {
+        target: 'https://descontainer.blob.core.windows.net',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/blob/, ''),
+      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
-      }
+      },
     }
   },
   resolve: {

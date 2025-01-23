@@ -13,7 +13,7 @@ const isLoading = ref(true);
 
 const fetchFiles = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/files', {
+    const response = await axios.get('/api/newestFiles', {
       params: { "username": authStore.user.username }
     });
     files.value = response.data;
@@ -38,6 +38,30 @@ const deleteFile = async (blobName) => {
     }
   }
 };
+
+const downloadFile = async (file) => {
+  const url = file.blobUrl.replace('https://descontainer.blob.core.windows.net', '/blob')
+  let response;
+  try {
+    response = await axios.get(url, { responseType: 'arraybuffer' });
+  } catch (error) {
+    console.error(error);
+    toast.error("Błąd w trakcie pobierania pliku.");
+    return;
+  }
+
+  const blob = new Blob([response.data], { type: 'application/octet-stream' });
+
+  const blobUrl = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = file.blobName;
+
+  link.click();
+
+  URL.revokeObjectURL(blobUrl);
+}
 
 onMounted(() => {
   fetchFiles();
@@ -79,13 +103,12 @@ onMounted(() => {
             </button>
             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
               <li>
-                <a
-                  :href="file.blobUrl"
+                <button
+                  @click="downloadFile(file)"
                   class="dropdown-item"
-                  download
                   :title="'Pobierz ' + file.blobName">
                   Pobierz
-                </a>
+                </button>
               </li>
               <li>
                 <button
