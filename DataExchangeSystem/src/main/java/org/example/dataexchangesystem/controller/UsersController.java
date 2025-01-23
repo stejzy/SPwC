@@ -77,9 +77,14 @@ public class UsersController {
         return ResponseEntity.ok("File " + fileName + " deleted successfully.");
     }
 
-    @GetMapping( "/files")
-    public List<BlobDTO> getFiles(@RequestParam String username) {
-        return userService.getFiles(username);
+    @GetMapping( "/allFiles")
+    public List<BlobDTO> getAllUserFiles(@RequestParam String username) {
+        return userService.getAllUserFiles(username);
+    }
+
+    @GetMapping( "/newestFiles")
+    public List<BlobDTO> getNewestUserFiles(@RequestParam String username) {
+        return userService.getNewestUserFiles(username);
     }
 
 

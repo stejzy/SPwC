@@ -14,7 +14,7 @@ public class UserFile {
 
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
-    private Users user; // Powiązanie z użytkownikiem, zakładając, że masz klasę `Users` jako encję.
+    private Users user;
 
     @Column(name = "blob_name", nullable = false)
     private String blobName;
@@ -22,19 +22,27 @@ public class UserFile {
     @Column(name = "blob_url", nullable = false)
     private String blobUrl;
 
-    @Column(name = "uploaded_at", nullable = false)
-    private LocalDateTime uploadedAt;
+    @Column(name = "last_modification", nullable = false)
+    private LocalDateTime lastModification;
+
+    @Column(name = "version", nullable = false)
+    private Integer version;
+
+    @Column(name = "file_size", nullable = false)
+    private Long fileSize;  // Dodanie rozmiaru pliku
 
     // Domyślny konstruktor (wymagany przez JPA)
     public UserFile() {
     }
 
     // Konstruktor do tworzenia obiektów
-    public UserFile(Users user, String blobName, String blobUrl) {
+    public UserFile(Users user, String blobName, String blobUrl, Integer version, Long fileSize) {
         this.user = user;
         this.blobName = blobName;
         this.blobUrl = blobUrl;
-        this.uploadedAt = LocalDateTime.now(); // Ustawienie daty dodania pliku
+        this.lastModification = LocalDateTime.now();
+        this.version = version;
+        this.fileSize = fileSize;
     }
 
     // Gettery i Settery
@@ -71,11 +79,28 @@ public class UserFile {
         this.blobUrl = blobUrl;
     }
 
-    public LocalDateTime getUploadedAt() {
-        return uploadedAt;
+    public LocalDateTime getLastModification() {
+        return lastModification;
     }
 
-    public void setUploadedAt(LocalDateTime uploadedAt) {
-        this.uploadedAt = uploadedAt;
+    public void setLastModification(LocalDateTime lastModification) {
+        this.lastModification = lastModification;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
     }
 }
+

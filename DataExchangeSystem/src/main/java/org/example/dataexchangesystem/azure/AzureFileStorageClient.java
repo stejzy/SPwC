@@ -28,14 +28,11 @@ public class AzureFileStorageClient implements FileStorageClient {
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
         BlobClient blobClient = blobContainerClient.getBlobClient(originalFileName);
-        if (blobClient.exists()) {
-            throw new IllegalArgumentException("A file with the name " + originalFileName + " already exists in the container.");
-        }
 
         try {
             blobClient.upload(inputStream, length, true);
         } catch (Exception e) {
-            throw new FileUploadException("Failed to upload file due to unknown error: " + e.getMessage(), e);
+            throw new FileUploadException("Nie udało się przesłać pliku: " + e.getMessage(), e);
         }
 
         return new BlobDTO(originalFileName, blobClient.getBlobUrl());
