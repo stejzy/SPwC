@@ -233,22 +233,29 @@ public class UsersService {
         }
     }
 
-    public List<BlobDTO> getAllUserFiles(String username) {
+    public List<BlobDTO> getAllUserFileVersions(String username, String fileName) throws FileNotFoundException {
         Users user = usersRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User with username " + username + " does not exist"));
 
-        List<UserFile> userFiles = userFilesRepository.findByUserId(user.getId());
+        List<UserFile> userFiles = userFilesRepository.findLatestFilesByBaseName(fileName);
+
+        if (userFiles.isEmpty()) {
+            throw new FileNotFoundException("File with name " + fileName + " not found for user " + username);
+        }
 
         List<BlobDTO> blobDTOList = new ArrayList<>();
 
+        // Loop through all found user files (versions) and create BlobDTOs
         for (UserFile userFile : userFiles) {
             BlobDTO blobDTO = createBlob(userFile, username);
-
             blobDTOList.add(blobDTO);
         }
 
+        // Return the list of BlobDTOs for the file versions
         return blobDTOList;
     }
+
+
 
     public List<BlobDTO> getNewestUserFiles(String username) {
         Users user = usersRepository.findByUsername(username)

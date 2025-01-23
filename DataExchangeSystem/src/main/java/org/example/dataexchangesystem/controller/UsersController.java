@@ -77,9 +77,9 @@ public class UsersController {
         return ResponseEntity.ok("File " + fileName + " deleted successfully.");
     }
 
-    @GetMapping( "/allFiles")
-    public List<BlobDTO> getAllUserFiles(@RequestParam String username) {
-        return userService.getAllUserFiles(username);
+    @GetMapping( "/allFileVersions")
+    public List<BlobDTO> getAllUserFileVersions(@RequestParam String username, String fileName) throws FileNotFoundException {
+        return userService.getAllUserFileVersions(username, fileName);
     }
 
     @GetMapping( "/newestFiles")
