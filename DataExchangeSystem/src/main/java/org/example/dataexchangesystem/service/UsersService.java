@@ -4,6 +4,7 @@ package org.example.dataexchangesystem.service;
 import com.nimbusds.oauth2.sdk.util.StringUtils;
 import jakarta.transaction.Transactional;
 import org.example.dataexchangesystem.azure.AzureFileStorageClient;
+import org.example.dataexchangesystem.config.FileUploadProgressWebSocketHandler;
 import org.example.dataexchangesystem.exception.FileReadException;
 import org.example.dataexchangesystem.exception.UserNotFoundException;
 import org.example.dataexchangesystem.model.BlobDTO;
@@ -151,6 +152,12 @@ public class UsersService {
     }
 
 
+    private final FileUploadProgressWebSocketHandler webSocketHandler;
+
+    @Autowired
+    public UsersService(FileUploadProgressWebSocketHandler webSocketHandler) {
+        this.webSocketHandler = webSocketHandler;
+    }
 
     public List<BlobDTO> uploadArchive(MultipartFile archive, String username) {
         Users user = usersRepository.findByUsername(username).orElseThrow(
@@ -160,6 +167,9 @@ public class UsersService {
 
         try (ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
             ZipEntry zipEntry;
+            long totalSize = archive.getSize();
+            long uploaded = 0;
+
             while ((zipEntry = zipInputStream.getNextEntry()) != null) {
                 if (!zipEntry.isDirectory() && !zipEntry.getName().contains("..")) {
                     String fileName = zipEntry.getName();
@@ -193,6 +203,10 @@ public class UsersService {
 
                         UserFile userFile = new UserFile(user, baseFileName, blobDTO.getBlobUrl(), version, fileSize);
                         userFilesRepository.save(userFile);
+
+                        // Aktualizacja postępu
+                        uploaded += fileSize;
+                        webSocketHandler.sendProgress(uploaded, totalSize);
 
                         String displayName = fileNameToDisplay(blobDTO.getBlobName(), username);
 
