@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth.js'
 import { useToast } from 'vue-toastification'
+import {useRouter} from 'vue-router'
+
+const router = useRouter();
 
 const toast = useToast();
 
@@ -17,6 +20,7 @@ const fetchFiles = async () => {
       params: { "username": authStore.user.username }
     });
     files.value = response.data;
+    console.log(files.value);
   } catch (error) {
     toast.error("Błąd w trakcie ładowania plików.");
     console.error(error);
@@ -63,6 +67,33 @@ const downloadFile = async (file) => {
   URL.revokeObjectURL(blobUrl);
 }
 
+const formatFileSize = (size) => {
+  if (size < 1024) {
+    return `${size} B`;
+  } else if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(2)} KB`;
+  } else if (size < 1024 * 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+  } else if (size < 1024 * 1024 * 1024 * 1024) {
+    return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  }
+}
+
+const viewVersions = async (file) => {
+  try {
+    const response = await axios.get('/api/allFileVersions', {
+      params: { username: authStore.user.username, fileName: file.blobName }
+    });
+    const versions = response.data;
+    console.log('Wersje pliku:', versions);
+
+    await router.push({ name: 'filesVersions', params: { fileName: file.blobName } });
+  } catch (error) {
+    toast.error("Błąd w trakcie ładowania wersji pliku.");
+    console.error(error);
+  }
+};
+
 onMounted(() => {
   fetchFiles();
 });
@@ -83,6 +114,8 @@ onMounted(() => {
       <tr>
         <th>#</th>
         <th>Nazwa Pliku</th>
+        <th>Rozmiar pliku</th>
+        <th>Ostatnia modyfikacja</th>
         <th></th>
       </tr>
       </thead>
@@ -90,6 +123,16 @@ onMounted(() => {
       <tr v-for="(file, index) in files" :key="file.name">
         <td>{{ index + 1 }}</td>
         <td>{{ file.blobName }}</td>
+        <td>{{(formatFileSize(file.fileSize))}}</td>
+        <td>{{ new Date(file.lastModification).toLocaleString('pl-PL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }) }}</td>
         <td>
           <div class="dropdown">
             <button
@@ -108,6 +151,14 @@ onMounted(() => {
                   class="dropdown-item"
                   :title="'Pobierz ' + file.blobName">
                   Pobierz
+                </button>
+              </li>
+              <li>
+                <button
+                  class="dropdown-item"
+                  @click="viewVersions(file)"
+                  :title="'Wersje ' + file.blobName">
+                  Wersje
                 </button>
               </li>
               <li>

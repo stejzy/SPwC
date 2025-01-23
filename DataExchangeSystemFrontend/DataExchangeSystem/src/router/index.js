@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { useAuthStore } from '@/stores/auth.js'
+import FilesVersionsList from '@/components/FilesVersionsList.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -31,7 +32,12 @@ const router = createRouter({
       name: 'send',
       component: () => import('../views/SendView.vue'),
       meta: { requiresAuth: true }
-    }
+    },
+    {
+      path: '/files/:fileName',
+      name: 'filesVersions',
+      component: FilesVersionsList,
+    },
   ],
 })
 

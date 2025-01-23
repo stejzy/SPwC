@@ -16,3 +16,7 @@ app.use(Toast);
 app.use(router);
 
 app.mount('#app');
+
+import { useAuthStore } from './stores/auth';
+const authStore = useAuthStore();
+authStore.setupAxiosInterceptors();
