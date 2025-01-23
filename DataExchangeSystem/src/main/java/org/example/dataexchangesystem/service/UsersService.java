@@ -23,7 +23,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -86,36 +88,69 @@ public class UsersService {
 
     public BlobDTO uploadFile(MultipartFile file, String username) {
         Users user = usersRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException("Użytkownik o nazwie " + username + " nie istnieje." +
-                                                            " Błąd przy wgrywaniu plików."));
+                .orElseThrow(() -> new UserNotFoundException("Użytkownik o nazwie " + username + " nie istnieje."));
+
+        String originalFileName = file.getOriginalFilename();
+        if (originalFileName == null || originalFileName.isBlank()) {
+            throw new IllegalArgumentException("Nazwa pliku nie może być pusta.");
+        }
+
+        String baseFileName = originalFileName.startsWith(username + "_") ?
+                originalFileName : username + "_" + originalFileName;
+
+        List<UserFile> existingFiles = userFilesRepository.findByUserAndBlobBaseName(user, baseFileName);
+
+        int version = 1;
+        if (!existingFiles.isEmpty()) {
+            version = existingFiles.stream()
+                    .mapToInt(UserFile::getVersion)
+                    .max()
+                    .orElse(0) + 1;
+        }
+
+        String versionedFileName = baseFileName + "_v" + version;
 
         BlobDTO blobDTO;
-
-        String uniqueFileName = username + "_" + file.getOriginalFilename();
-
         try (InputStream inputStream = file.getInputStream()) {
             blobDTO = this.azureFileStorageClient.uploadFile(
                     "file-container",
-                    uniqueFileName,
+                    versionedFileName,
                     inputStream,
                     file.getSize());
-        }
-        catch (IOException e) {
-            throw new FileReadException("Failed to read file: " + file.getOriginalFilename(), e);
+        } catch (IOException e) {
+            throw new FileReadException("Nie udało się odczytać pliku: " + file.getOriginalFilename(), e);
         }
 
         if (blobDTO == null) {
             throw new IllegalStateException("File upload failed but no exception was thrown");
         }
 
-
-        UserFile userFile = new UserFile(user, uniqueFileName, blobDTO.getBlobUrl());
+        UserFile userFile = new UserFile(user, baseFileName, blobDTO.getBlobUrl(), version, file.getSize());
         userFilesRepository.save(userFile);
 
-        String displayName = blobDTO.getBlobName().substring(username.length() + 1);
+        String displayName = fileNameToDisplay(blobDTO.getBlobName(), username);
         blobDTO.setBlobName(displayName);
+        blobDTO.setVersion(version);
+        blobDTO.setFileSize(file.getSize());
+        blobDTO.setLastModification(userFile.getLastModification());
+
         return blobDTO;
     }
+
+
+    private String fileNameToDisplay(String fileName, String username) {
+        // Usunięcie wersji (jeśli występuje)
+        String fileNameWithoutVersion = fileName.contains("_v") ? fileName.split("_v")[0] : fileName;
+
+        // Usunięcie nazwy użytkownika z początku (jeśli występuje)
+        if (fileNameWithoutVersion.startsWith(username + "_")) {
+            return fileNameWithoutVersion.substring(username.length() + 1); // Usunięcie "username_" z początku
+        }
+
+        return fileNameWithoutVersion;
+    }
+
+
 
     public List<BlobDTO> uploadArchive(MultipartFile archive, String username) {
         Users user = usersRepository.findByUsername(username).orElseThrow(
@@ -123,16 +158,29 @@ public class UsersService {
 
         List<BlobDTO> blobDTOList = new ArrayList<>();
 
-        try(ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
+        try (ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
             ZipEntry zipEntry;
-            while((zipEntry = zipInputStream.getNextEntry()) != null) {
+            while ((zipEntry = zipInputStream.getNextEntry()) != null) {
                 if (!zipEntry.isDirectory() && !zipEntry.getName().contains("..")) {
                     String fileName = zipEntry.getName();
-                    String uniqueFileName = username + "_" + fileName;
+
+                    String baseFileName = fileName.startsWith(username + "_") ? fileName : username + "_" + fileName;
+
+                    List<UserFile> existingFiles = userFilesRepository.findByUserAndBlobBaseName(user, baseFileName);
+
+                    int version = 1;
+                    if (!existingFiles.isEmpty()) {
+                        version = existingFiles.stream()
+                                .mapToInt(UserFile::getVersion)
+                                .max()
+                                .orElse(0) + 1;
+                    }
+
+                    String versionedFileName = baseFileName + "_v" + version;
+
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                     byte[] buffer = new byte[4096];
                     int bytesRead;
-
                     while ((bytesRead = zipInputStream.read(buffer)) != -1) {
                         byteArrayOutputStream.write(buffer, 0, bytesRead);
                     }
@@ -141,39 +189,51 @@ public class UsersService {
                     long fileSize = fileBytes.length;
 
                     try (InputStream inputStream = new ByteArrayInputStream(fileBytes)) {
-                        BlobDTO blobDTO = azureFileStorageClient.uploadFile("file-container", uniqueFileName, inputStream, fileSize);
+                        BlobDTO blobDTO = azureFileStorageClient.uploadFile("file-container", versionedFileName, inputStream, fileSize);
 
-                        String displayName = blobDTO.getBlobName().substring(username.length() + 1);
-                        blobDTO.setBlobName(displayName);
-                        blobDTOList.add(blobDTO);
-
-                        UserFile userFile = new UserFile(user, uniqueFileName, blobDTO.getBlobUrl());
+                        UserFile userFile = new UserFile(user, baseFileName, blobDTO.getBlobUrl(), version, fileSize);
                         userFilesRepository.save(userFile);
+
+                        String displayName = fileNameToDisplay(blobDTO.getBlobName(), username);
+
+                        blobDTO.setBlobName(displayName);
+                        blobDTO.setVersion(version);
+                        blobDTO.setFileSize(fileSize);
+                        blobDTO.setLastModification(userFile.getLastModification());
+
+                        blobDTOList.add(blobDTO);
                     }
                 }
-
             }
         } catch (IOException e) {
-            throw new FileReadException("Failed to read file of archive: " + archive.getOriginalFilename(), e);
+            throw new FileReadException("Failed to read file from archive: " + archive.getOriginalFilename(), e);
         }
 
         return blobDTOList;
     }
 
+
     public void deleteFile(String fileName, String username) throws FileNotFoundException {
-        usersRepository.findByUsername(username)
+        Users user = usersRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("Użytkownik o nazwie " + username + " nie istnieje."));
 
-        String uniqueFileName = username + "_" + fileName;
+        String baseFileName = fileName.startsWith(username + "_") ? fileName : username + "_" + fileName;
 
-        UserFile userFile = userFilesRepository.findByBlobName(uniqueFileName)
-                .orElseThrow(() -> new FileNotFoundException("File with name " + uniqueFileName + " does not exist for user " + username));
+        List<UserFile> userFiles = userFilesRepository.findByUserAndBlobBaseName(user, baseFileName);
 
-        azureFileStorageClient.deleteFile("file-container", uniqueFileName);
-        userFilesRepository.delete(userFile);
+        if (userFiles.isEmpty()) {
+            throw new FileNotFoundException("No files found with name " + fileName + " for user " + username);
+        }
+
+        for (UserFile userFile : userFiles) {
+            String uniqueFileName = userFile.getBlobName();
+            azureFileStorageClient.deleteFile("file-container", uniqueFileName);
+
+            userFilesRepository.delete(userFile);
+        }
     }
 
-    public List<BlobDTO> getFiles(String username) {
+    public List<BlobDTO> getAllUserFiles(String username) {
         Users user = usersRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User with username " + username + " does not exist"));
 
@@ -182,18 +242,55 @@ public class UsersService {
         List<BlobDTO> blobDTOList = new ArrayList<>();
 
         for (UserFile userFile : userFiles) {
-            String blobName = userFile.getBlobName();
-            String displayName = blobName.substring(username.length() + 1);
+            BlobDTO blobDTO = createBlob(userFile, username);
 
-            String blobUrl = userFile.getBlobUrl();
+            blobDTOList.add(blobDTO);
+        }
 
-            blobDTOList.add(new BlobDTO(displayName, blobUrl));
+        return blobDTOList;
+    }
+
+    public List<BlobDTO> getNewestUserFiles(String username) {
+        Users user = usersRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException("User with username " + username + " does not exist"));
+
+        List<UserFile> userFiles = userFilesRepository.findByUserId(user.getId());
+
+        Map<String, UserFile> latestFiles = new HashMap<>();
+
+        for (UserFile userFile : userFiles) {
+            String baseFileName = userFile.getBlobName().split("_v")[0];
+            UserFile existingFile = latestFiles.get(baseFileName);
+
+            if (existingFile == null || userFile.getLastModification().isAfter(existingFile.getLastModification())) {
+                latestFiles.put(baseFileName, userFile);
+            }
+        }
+
+        List<BlobDTO> blobDTOList = new ArrayList<>();
+
+        for (UserFile userFile : latestFiles.values()) {
+            BlobDTO blobDTO = createBlob(userFile, username);
+
+            blobDTOList.add(blobDTO);
         }
 
         return blobDTOList;
     }
 
     //Auxiliary methods
+
+    private BlobDTO createBlob(UserFile userFile, String username) {
+        String blobName = userFile.getBlobName();
+        String displayName = blobName.substring(username.length() + 1);
+
+        BlobDTO blobDTO = new BlobDTO(displayName, userFile.getBlobUrl());
+        blobDTO.setVersion(userFile.getVersion());
+        blobDTO.setFileSize(userFile.getFileSize());
+        blobDTO.setLastModification(userFile.getLastModification());
+
+        return blobDTO;
+    }
 
     private boolean isValidPassword(String password) {
         if (StringUtils.isBlank(password) || password.length() < 8) {
