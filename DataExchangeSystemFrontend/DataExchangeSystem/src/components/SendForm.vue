@@ -8,39 +8,87 @@ const authStore = useAuthStore();
 
 const toast = useToast();
 
-const file = ref(null);
+const files = ref(null);
 
 const send = async () => {
   const formData = new FormData();
-  console.log(file.value);
-  formData.append("file", file.value);
-  formData.append('username', authStore.user.username);
 
-  try {
-    await axios.post('/api/uploadFile', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+  if (files.value.length > 1 && Array.from(files.value).some(file => file.type === "application/zip")) {
+    toast.error("Nie można przesłać pliku ZIP razem z innymi plikami!")
+    return
+  }
+
+  if (files.value.length === 1 && files.value[0].type === "application/x-zip-compressed") { // ZIP
+    formData.append('archive', files.value[0]);
+    formData.append('username', authStore.user.username);
+
+    try {
+      await axios.post('/api/uploadArchive', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      toast.success("Pomyślnie udało się wysłać archiwum ZIP!")
+    } catch (error) {
+      if (error.status === 400) {
+        toast.error(error.response.data);
+      } else {
+        toast.error("Wystąpił błąd przy przesyłaniu!")
       }
-    });
-    toast.success("Pomyślnie udało się wysłać plik!")
-  } catch (error) {
-    if (error.status === 400) {
-      toast.error(error.response.data);
-    } else {
-      toast.error("Wystąpił błąd przy przesyłaniu!")
+      console.error(error);
     }
-    console.error(error);
+} else if (files.value.length > 1) { // PARE PLIKOW
+    const fileArray = Array.from(files.value);
+    fileArray.forEach(file => {
+      formData.append('files', file)
+    });
+    formData.append('username', authStore.user.username);
+
+    try {
+      await axios.post('/api/uploadFiles', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      toast.success("Pomyślnie udało się wysłać pliki!")
+    } catch (error) {
+      if (error.status === 400) {
+        toast.error(error.response.data);
+      } else {
+        toast.error("Wystąpił błąd przy przesyłaniu!")
+      }
+      console.error(error);
+    }
+  } else if (files.value.length === 1) { // JEDEN PLIK
+    formData.append("file", file.value);
+    formData.append('username', authStore.user.username);
+
+    try {
+      await axios.post('/api/uploadFile', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      toast.success("Pomyślnie udało się wysłać plik!")
+    } catch (error) {
+      if (error.status === 400) {
+        toast.error(error.response.data);
+      } else {
+        toast.error("Wystąpił błąd przy przesyłaniu!")
+      }
+      console.error(error);
+    }
   }
 }
 </script>
 
 <template>
   <div class="container mt-5">
-    <h3>Wybierz plik do wysłania</h3>
+    <h3>Wybierz pliki do wysłania</h3>
     <form @submit.prevent="send">
       <div class="mb-3">
-        <label for="fileInput" class="form-label">Wybierz plik</label>
-        <input type="file" id="fileInput" class="form-control" @change="e => file = e.target.files[0]" required />
+        <label for="fileInput" class="form-label">Wybierz pliki</label>
+        <input type="file" id="fileInput" class="form-control" @change="e => files = e.target.files" multiple required />
       </div>
       <button type="submit" class="btn btn-primary">Wyślij plik</button>
     </form>

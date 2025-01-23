@@ -3,6 +3,8 @@ import { createPinia } from 'pinia'
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import 'primeicons/primeicons.css'
 
 import App from './App.vue'
 import router from './router'
