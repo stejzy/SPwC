@@ -1,74 +1,70 @@
 <script setup>
-import {onBeforeUnmount, onMounted, ref} from 'vue'
-import axios from 'axios'
-import { useToast } from 'vue-toastification'
-import { useAuthStore } from '@/stores/auth.js'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import axios from 'axios';
+import { useToast } from 'vue-toastification';
+import { useAuthStore } from '@/stores/auth.js';
 
 const authStore = useAuthStore();
 const toast = useToast();
 const files = ref(null);
 
 const connection = ref(null);
-const progress = ref(0); // Referencja do progresu
-const isConnected = ref(false); // Referencja do statusu połączenia
+const progress = ref(0);
+const isConnected = ref(false);
+const isComputing = ref(false);
 
-// Funkcja otwierająca połączenie WebSocket
 const openWebSocketConnection = () => {
-  // Połączenie WebSocket
   connection.value = new WebSocket("ws://localhost:8080/ws/progress");
 
-  // Po otwarciu połączenia
-  connection.value.onopen = (event) => {
-    console.log("Połączenie WebSocket zostało nawiązane:", event);
-    toast.success("WebSocket Connected!");
+  connection.value.onopen = () => {
+    toast.success("Połączono WebSocket!", {
+      position: 'bottom-left'
+    })
     isConnected.value = true;
   };
 
   connection.value.onmessage = (event) => {
-    console.log("Wiadomość od serwera:", event.data);
+    progress.value = event.data;
+    progress.value = parseFloat(parseFloat(progress.value).toFixed(2));
 
-    // Zakładając, że wiadomości zawierają tekst typu "Progress: 45%"
-    const match = event.data.match(/Progress:\s*(\d+)%/);
-    if (match) {
-      progress.value = parseInt(match[1], 10); // Musi być `progress.value`
+    if (event.data >= 100) {
+      progress.value = 0;
+      isComputing.value = false;
+      toast.success("Przesyłanie zakończone!");
     }
   };
 
-  // Obsługa błędów
   connection.value.onerror = (error) => {
     console.error("Błąd WebSocket:", error);
-    toast.error("WebSocket Error");
     isConnected.value = false;
   };
 
-  // Po zamknięciu połączenia
-  connection.value.onclose = (event) => {
-    console.log("Połączenie WebSocket zostało zamknięte:", event);
-    toast.info("WebSocket Disconnected");
+  connection.value.onclose = () => {
+    toast.info("Zamknięto WebSocket!", {
+      position: 'bottom-left'
+    })
     isConnected.value = false;
   };
 };
 
-// Otwarcie połączenia WebSocket po zamontowaniu komponentu
 onMounted(() => {
   openWebSocketConnection();
 });
 
-// Zamknięcie połączenia WebSocket przed zniszczeniem komponentu
 onBeforeUnmount(() => {
   if (connection.value) {
-    connection.value.close(); // Zamykanie połączenia
+    connection.value.close();
   }
 });
 
 const send = async () => {
   const formData = new FormData();
-
   if (files.value.length > 1 && Array.from(files.value).some(file => file.type === "application/x-zip-compressed")) {
-    toast.error("Nie można przesłać pliku ZIP razem z innymi plikami!")
-    return
+    toast.error("Nie można przesłać pliku ZIP razem z innymi plikami!");
+    return;
   }
 
+  isComputing.value = true;
   if (files.value.length === 1 && files.value[0].type === "application/x-zip-compressed") { // ZIP
     formData.append('archive', files.value[0]);
     formData.append('username', authStore.user.username);
@@ -79,19 +75,13 @@ const send = async () => {
           'Content-Type': 'multipart/form-data'
         }
       });
-      // connectWebSocket();
     } catch (error) {
-      if (error.status === 400) {
-        toast.error(error.response.data);
-      } else {
-        toast.error("Wystąpił błąd przy przesyłaniu!")
-      }
-      console.error(error);
+      handleUploadError(error);
     }
-} else if (files.value.length > 1) { // PARE PLIKOW
+  } else if (files.value.length > 1) { // Wiele plików
     const fileArray = Array.from(files.value);
     fileArray.forEach(file => {
-      formData.append('files', file)
+      formData.append('files', file);
     });
     formData.append('username', authStore.user.username);
 
@@ -101,16 +91,12 @@ const send = async () => {
           'Content-Type': 'multipart/form-data'
         }
       });
-      toast.success("Pomyślnie udało się wysłać pliki!")
+      isComputing.value = false;
+      toast.success("Pomyślnie udało się wysłać pliki!");
     } catch (error) {
-      if (error.status === 400) {
-        toast.error(error.response.data);
-      } else {
-        toast.error("Wystąpił błąd przy przesyłaniu!")
-      }
-      console.error(error);
+      handleUploadError(error);
     }
-  } else if (files.value.length === 1) { // JEDEN PLIK
+  } else if (files.value.length === 1) { // Jeden plik
     formData.append("file", files.value[0]);
     formData.append('username', authStore.user.username);
 
@@ -120,17 +106,23 @@ const send = async () => {
           'Content-Type': 'multipart/form-data'
         }
       });
-      toast.success("Pomyślnie udało się wysłać plik!")
+      isComputing.value = false;
+      toast.success("Pomyślnie udało się wysłać plik!");
     } catch (error) {
-      if (error.status === 400) {
-        toast.error(error.response.data);
-      } else {
-        toast.error("Wystąpił błąd przy przesyłaniu!")
-      }
-      console.error(error);
+      handleUploadError(error);
     }
   }
-}
+};
+
+const handleUploadError = (error) => {
+  isComputing.value = false;
+  if (error.response?.status === 400) {
+    toast.error(error.response.data);
+  } else {
+    toast.error("Wystąpił błąd przy przesyłaniu!");
+  }
+  console.error(error);
+};
 </script>
 
 <template>
@@ -139,13 +131,38 @@ const send = async () => {
     <form @submit.prevent="send">
       <div class="mb-3">
         <label for="fileInput" class="form-label">Wybierz pliki</label>
-        <input type="file" id="fileInput" class="form-control" @change="e => files = e.target.files" multiple required />
+        <input
+          type="file"
+          id="fileInput"
+          class="form-control"
+          @change="e => files = e.target.files"
+          multiple
+          required
+        />
       </div>
-      <button type="submit" class="btn btn-primary">Wyślij plik</button>
+      <button type="submit" class="btn btn-primary" :disabled="progress > 0 && progress < 100 || isComputing">
+        {{ isComputing ? "Przetwarzanie..." : progress > 0 && progress < 100 ? "Przesyłanie..." : "Wyślij plik" }}
+      </button>
     </form>
-  </div>
-  <div v-if="progress !== null">
-    Progress: {{ progress }}%
+
+    <div v-if="progress > 0" class="mt-3">
+      <h5>Postęp przesyłania</h5>
+      <div class="progress">
+        <div
+          class="progress-bar progress-bar-striped progress-bar-animated"
+          role="progressbar"
+          :style="{ width: progress + '%' }"
+          :aria-valuenow="progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          {{ progress }}%
+        </div>
+      </div>
+    </div>
+    <div v-if="isComputing && progress === 0" class="mt-3">
+      <p class="text-danger">Trwa przetwarzanie. Proszę czekać...</p>
+    </div>
   </div>
 </template>
 
@@ -163,5 +180,9 @@ const send = async () => {
   width: 100%;
   padding: 10px;
   font-size: 1.1rem;
+}
+
+.progress {
+  height: 25px;
 }
 </style>
