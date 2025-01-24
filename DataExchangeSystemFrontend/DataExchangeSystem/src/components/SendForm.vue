@@ -1,35 +1,66 @@
 <script setup>
-import { onBeforeUnmount, ref } from 'vue'
+import {onBeforeUnmount, onMounted, ref} from 'vue'
 import axios from 'axios'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth.js'
-import {io} from 'socket.io-client';
-
-const socket = io('http://localhost:8080/', {})
-
-socket.on('uploadProgress', (progress) => {
-  console.log(progress);
-})
 
 const authStore = useAuthStore();
 const toast = useToast();
 const files = ref(null);
-// const progress = ref(null);
 
-// let stompClient = null;
+const connection = ref(null);
+const progress = ref(0); // Referencja do progresu
+const isConnected = ref(false); // Referencja do statusu połączenia
 
-// const connectWebSocket = () => {
-//   const socket = new SockJS('http://localhost:8080/ws'); // Połączenie do Spring WebSocket
-//   stompClient = new Client({
-//     webSocketFactory: () => socket,
-//     onConnect: () => {
-//       stompClient.subscribe('/topic/progress', (message) => {
-//         progress.value = parseFloat(message.body.replace('Progress: ', '').replace('%', ''));
-//       });
-//     }
-//   });
-//   stompClient.activate();
-// };
+// Funkcja otwierająca połączenie WebSocket
+const openWebSocketConnection = () => {
+  // Połączenie WebSocket
+  connection.value = new WebSocket("ws://localhost:8080/ws/progress");
+
+  // Po otwarciu połączenia
+  connection.value.onopen = (event) => {
+    console.log("Połączenie WebSocket zostało nawiązane:", event);
+    toast.success("WebSocket Connected!");
+    isConnected.value = true;
+  };
+
+  // Po odebraniu wiadomości
+  connection.value.onmessage = (event) => {
+    console.log("Wiadomość od serwera:", event.data);
+
+    // Zakładając, że wiadomości zawierają tekst typu "Progress: 45%"
+    const match = event.data.match(/Progress:\s*(\d+)%/);
+    if (match) {
+      progress.value = parseInt(match[1], 10); // Ustawiamy progres na podstawie wiadomości
+    }
+  };
+
+  // Obsługa błędów
+  connection.value.onerror = (error) => {
+    console.error("Błąd WebSocket:", error);
+    toast.error("WebSocket Error");
+    isConnected.value = false;
+  };
+
+  // Po zamknięciu połączenia
+  connection.value.onclose = (event) => {
+    console.log("Połączenie WebSocket zostało zamknięte:", event);
+    toast.info("WebSocket Disconnected");
+    isConnected.value = false;
+  };
+};
+
+// Otwarcie połączenia WebSocket po zamontowaniu komponentu
+onMounted(() => {
+  openWebSocketConnection();
+});
+
+// Zamknięcie połączenia WebSocket przed zniszczeniem komponentu
+onBeforeUnmount(() => {
+  if (connection.value) {
+    connection.value.close(); // Zamykanie połączenia
+  }
+});
 
 const send = async () => {
   const formData = new FormData();
@@ -100,13 +131,9 @@ const send = async () => {
       console.error(error);
     }
   }
-}
 
-onBeforeUnmount(() => {
-  if (stompClient) {
-    stompClient.deactivate();
-  }
-});
+  console.log("dziala")
+}
 </script>
 
 <template>
