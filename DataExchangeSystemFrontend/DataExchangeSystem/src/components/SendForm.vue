@@ -24,14 +24,13 @@ const openWebSocketConnection = () => {
     isConnected.value = true;
   };
 
-  // Po odebraniu wiadomości
   connection.value.onmessage = (event) => {
     console.log("Wiadomość od serwera:", event.data);
 
     // Zakładając, że wiadomości zawierają tekst typu "Progress: 45%"
     const match = event.data.match(/Progress:\s*(\d+)%/);
     if (match) {
-      progress.value = parseInt(match[1], 10); // Ustawiamy progres na podstawie wiadomości
+      progress.value = parseInt(match[1], 10); // Musi być `progress.value`
     }
   };
 
