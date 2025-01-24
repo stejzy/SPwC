@@ -15,18 +15,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(webSocketHandler(), "/ws/progress")
-                .addInterceptors(new HttpSessionHandshakeInterceptor());
-    }
-
-    @Bean
-    public WebSocketHandler webSocketHandler() {
-        return new FileUploadProgressWebSocketHandler();
-    }
-
-    @Bean
-    public ServerEndpointExporter serverEndpointExporter() {
-        return new ServerEndpointExporter();
+        registry.addHandler(fileUploadProgressWebSocketHandler(), "/ws/progress")
+                .setAllowedOrigins("*");
     }
 
     @Bean

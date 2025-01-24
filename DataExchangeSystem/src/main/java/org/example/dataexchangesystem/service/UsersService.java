@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.sql.SQLOutput;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -159,16 +160,36 @@ public class UsersService {
         this.webSocketHandler = webSocketHandler;
     }
 
+
+
     public List<BlobDTO> uploadArchive(MultipartFile archive, String username) {
         Users user = usersRepository.findByUsername(username).orElseThrow(
-                () -> new UserNotFoundException("Użytkownik o nazwie " + username + " nie istnieje."));
+                () -> new UserNotFoundException("Użytkownik o nazwie " + username + " nie istnieje.")
+        );
 
         List<BlobDTO> blobDTOList = new ArrayList<>();
+        long totalSize = 0;
+        long uploaded = 0;
 
+        // Obliczanie całkowitego rozmiaru plików w archiwum
         try (ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
             ZipEntry zipEntry;
-            long totalSize = archive.getSize();
-            long uploaded = 0;
+            while ((zipEntry = zipInputStream.getNextEntry()) != null) {
+                if (!zipEntry.isDirectory() && !zipEntry.getName().contains("..")) {
+                    totalSize += zipEntry.getSize();
+                }
+            }
+        } catch (IOException e) {
+            throw new FileReadException("Failed to read file from archive: " + archive.getOriginalFilename(), e);
+        }
+
+        if (totalSize == 0) {
+            throw new FileReadException("Archiwum jest puste lub zawiera jedynie foldery.");
+        }
+
+        // Przesyłanie plików i wysyłanie progresu
+        try (ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
+            ZipEntry zipEntry;
 
             while ((zipEntry = zipInputStream.getNextEntry()) != null) {
                 if (!zipEntry.isDirectory() && !zipEntry.getName().contains("..")) {
@@ -206,7 +227,12 @@ public class UsersService {
 
                         // Aktualizacja postępu
                         uploaded += fileSize;
-                        webSocketHandler.sendProgress(uploaded, totalSize);
+
+                        // Wysyłanie postępu przez WebSocket (jeśli handler jest dostępny)
+                        if (webSocketHandler != null) {
+                            System.out.println("skibidi");
+                            webSocketHandler.sendProgress(uploaded, totalSize);
+                        }
 
                         String displayName = fileNameToDisplay(blobDTO.getBlobName(), username);
 
@@ -225,6 +251,8 @@ public class UsersService {
 
         return blobDTOList;
     }
+
+
 
 
     public void deleteFile(String fileName, String username) throws FileNotFoundException {
