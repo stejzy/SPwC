@@ -3,33 +3,11 @@ import { onBeforeUnmount, ref } from 'vue'
 import axios from 'axios'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth.js'
-import {io} from 'socket.io-client';
 
-const socket = io('http://localhost:8080/', {})
-
-socket.on('uploadProgress', (progress) => {
-  console.log(progress);
-})
 
 const authStore = useAuthStore();
 const toast = useToast();
 const files = ref(null);
-// const progress = ref(null);
-
-// let stompClient = null;
-
-// const connectWebSocket = () => {
-//   const socket = new SockJS('http://localhost:8080/ws'); // Połączenie do Spring WebSocket
-//   stompClient = new Client({
-//     webSocketFactory: () => socket,
-//     onConnect: () => {
-//       stompClient.subscribe('/topic/progress', (message) => {
-//         progress.value = parseFloat(message.body.replace('Progress: ', '').replace('%', ''));
-//       });
-//     }
-//   });
-//   stompClient.activate();
-// };
 
 const send = async () => {
   const formData = new FormData();
@@ -49,7 +27,6 @@ const send = async () => {
           'Content-Type': 'multipart/form-data'
         }
       });
-      // connectWebSocket();
     } catch (error) {
       if (error.status === 400) {
         toast.error(error.response.data);
@@ -101,12 +78,6 @@ const send = async () => {
     }
   }
 }
-
-onBeforeUnmount(() => {
-  if (stompClient) {
-    stompClient.deactivate();
-  }
-});
 </script>
 
 <template>
@@ -119,9 +90,6 @@ onBeforeUnmount(() => {
       </div>
       <button type="submit" class="btn btn-primary">Wyślij plik</button>
     </form>
-  </div>
-  <div v-if="progress !== null">
-    Progress: {{ progress }}%
   </div>
 </template>
 

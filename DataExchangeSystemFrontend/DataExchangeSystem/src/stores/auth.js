@@ -5,7 +5,6 @@ import { jwtDecode } from "jwt-decode";
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     accessToken: localStorage.getItem('accessToken') || null,
-    refreshToken: localStorage.getItem('refreshToken') || null,
     user: JSON.parse(localStorage.getItem('user')) || null,
   }),
   actions: {
@@ -42,11 +41,14 @@ export const useAuthStore = defineStore('auth', {
       delete axios.defaults.headers.common['Authorization'];
     },
     setupAxiosInterceptors() {
+      if (this.accessToken) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${this.accessToken}`;
+      }
+
       axios.interceptors.response.use(
         response => response,
         async (error) => {
           const originalRequest = error.config;
-          originalRequest.headers['Authorization'] = `Bearer ${this.accessToken}`;
           if (error.response && error.response.status === 401 && this.accessToken) {
             try {
               originalRequest.headers['Authorization'] = `Bearer ${this.accessToken}`;
