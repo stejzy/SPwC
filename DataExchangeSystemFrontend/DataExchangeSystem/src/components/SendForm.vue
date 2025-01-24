@@ -130,8 +130,6 @@ const send = async () => {
       console.error(error);
     }
   }
-
-  console.log("dziala")
 }
 </script>
 
