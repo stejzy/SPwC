@@ -14,7 +14,7 @@ const isConnected = ref(false);
 const isComputing = ref(false);
 
 const openWebSocketConnection = () => {
-  connection.value = new WebSocket("ws://localhost:8080/ws/progress");
+  connection.value = new WebSocket("wss://dataexchangesystem.azurewebsites.net/ws/progress");
 
   connection.value.onopen = () => {
     toast.success("Połączono WebSocket!", {
@@ -101,7 +101,7 @@ const send = async () => {
     formData.append('username', authStore.user.username);
 
     try {
-      await axios.post('/api/uploadFile', formData, {
+      await axios.post('https://dataexchangesystem.azurewebsites.net/uploadFile', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

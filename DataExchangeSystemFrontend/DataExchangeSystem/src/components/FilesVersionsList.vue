@@ -42,6 +42,11 @@ const formatFileSize = (size) => {
 
 const downloadVersion = async (file) => {
   const url = file.blobUrl.replace('https://descontainer.blob.core.windows.net', '/blob')
+
+  const originalAuthHeader = axios.defaults.headers.common['Authorization'];
+
+  delete axios.defaults.headers.common['Authorization'];
+
   let response;
   try {
     response = await axios.get(url, { responseType: 'arraybuffer' });
@@ -49,6 +54,12 @@ const downloadVersion = async (file) => {
     console.error(error);
     toast.error("Błąd w trakcie pobierania pliku.");
     return;
+  } finally {
+    if (originalAuthHeader) {
+      axios.defaults.headers.common['Authorization'] = originalAuthHeader;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
   }
 
   const blob = new Blob([response.data], { type: 'application/octet-stream' });

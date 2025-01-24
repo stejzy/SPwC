@@ -5,7 +5,9 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
+import org.example.dataexchangesystem.log.LogBookService;
 import org.example.dataexchangesystem.model.BlobDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -22,6 +24,8 @@ public class AzureFileStorageClient implements FileStorageClient {
         this.blobServiceClient = blobServiceClient;
     }
 
+    @Autowired
+    private LogBookService logBookService;
 
     @Override
     public BlobDTO uploadFile(String containerName, String originalFileName, InputStream inputStream, long length) throws FileUploadException {

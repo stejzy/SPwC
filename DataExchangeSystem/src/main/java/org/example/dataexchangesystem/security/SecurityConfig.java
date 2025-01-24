@@ -42,9 +42,9 @@ public class SecurityConfig{
                         .requestMatchers("/login").permitAll()
                         .requestMatchers("/register").permitAll()
 //                        .anyRequest().authenticated()
-//                        .anyRequest().permitAll()
-                        .requestMatchers("/ws/**").permitAll() // Zezwolenie na dostęp do WebSocket
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
+//                        .requestMatchers("/ws/**").permitAll() // Zezwolenie na dostęp do WebSocket
+//                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -7,6 +7,7 @@ import org.example.dataexchangesystem.azure.AzureFileStorageClient;
 import org.example.dataexchangesystem.config.FileUploadProgressWebSocketHandler;
 import org.example.dataexchangesystem.exception.FileReadException;
 import org.example.dataexchangesystem.exception.UserNotFoundException;
+import org.example.dataexchangesystem.log.LogBookService;
 import org.example.dataexchangesystem.model.BlobDTO;
 import org.example.dataexchangesystem.model.UserFile;
 import org.example.dataexchangesystem.model.UsersDTO;
@@ -87,6 +88,9 @@ public class UsersService {
 
         usersRepository.save(user);
     }
+
+    @Autowired
+    private LogBookService logBookService;
 
     public BlobDTO uploadFile(MultipartFile file, String username) {
         Users user = usersRepository.findByUsername(username)
