@@ -17,7 +17,7 @@ public class FileUploadProgressWebSocketHandler extends TextWebSocketHandler {
     public void sendProgress(long uploaded, long total) {
         if (session != null && session.isOpen()) {
             double progress = (double) uploaded / total * 100;
-            String message = "Progress: " + progress + "%";
+            String message = String.valueOf(progress);
             System.out.println("sendProgress called, wysyłam wiadomość: " + message); // Debugging log
             try {
                 session.sendMessage(new TextMessage(message));

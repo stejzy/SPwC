@@ -168,24 +168,8 @@ public class UsersService {
         );
 
         List<BlobDTO> blobDTOList = new ArrayList<>();
-        long totalSize = 0;
+        long totalSize = zipSize(archive);
         long uploaded = 0;
-
-        // Obliczanie całkowitego rozmiaru plików w archiwum
-        try (ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
-            ZipEntry zipEntry;
-            while ((zipEntry = zipInputStream.getNextEntry()) != null) {
-                if (!zipEntry.isDirectory() && !zipEntry.getName().contains("..")) {
-                    totalSize += zipEntry.getSize();
-                }
-            }
-        } catch (IOException e) {
-            throw new FileReadException("Failed to read file from archive: " + archive.getOriginalFilename(), e);
-        }
-
-        if (totalSize == 0) {
-            throw new FileReadException("Archiwum jest puste lub zawiera jedynie foldery.");
-        }
 
         // Przesyłanie plików i wysyłanie progresu
         try (ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
@@ -212,8 +196,18 @@ public class UsersService {
                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                     byte[] buffer = new byte[4096];
                     int bytesRead;
+                    int i = 0;
                     while ((bytesRead = zipInputStream.read(buffer)) != -1) {
                         byteArrayOutputStream.write(buffer, 0, bytesRead);
+
+                        if (webSocketHandler != null) {
+                            uploaded += bytesRead;
+                            if (i == 20 ) {
+                                webSocketHandler.sendProgress(uploaded, totalSize);
+                                i = 0;
+                            }
+                            i++;
+                        }
                     }
 
                     byte[] fileBytes = byteArrayOutputStream.toByteArray();
@@ -225,15 +219,6 @@ public class UsersService {
                         UserFile userFile = new UserFile(user, baseFileName, blobDTO.getBlobUrl(), version, fileSize);
                         userFilesRepository.save(userFile);
 
-                        // Aktualizacja postępu
-                        uploaded += fileSize;
-
-                        // Wysyłanie postępu przez WebSocket (jeśli handler jest dostępny)
-                        if (webSocketHandler != null) {
-                            System.out.println("skibidi");
-                            webSocketHandler.sendProgress(uploaded, totalSize);
-                        }
-
                         String displayName = fileNameToDisplay(blobDTO.getBlobName(), username);
 
                         blobDTO.setBlobName(displayName);
@@ -242,6 +227,7 @@ public class UsersService {
                         blobDTO.setLastModification(userFile.getLastModification());
 
                         blobDTOList.add(blobDTO);
+                        webSocketHandler.sendProgress(uploaded, totalSize);
                     }
                 }
             }
@@ -252,6 +238,31 @@ public class UsersService {
         return blobDTOList;
     }
 
+
+    public long zipSize(MultipartFile archive) {
+        long totalSize = 0;
+
+        try (ZipInputStream zipInputStream = new ZipInputStream(archive.getInputStream())) {
+            ZipEntry zipEntry;
+            byte[] buffer = new byte[4096];
+            while ((zipEntry = zipInputStream.getNextEntry()) != null) {
+                if (!zipEntry.isDirectory() && !zipEntry.getName().contains("..")) {
+                    int bytesRead;
+                    long entrySize = 0;
+                    while ((bytesRead = zipInputStream.read(buffer)) != -1) {
+                        entrySize += bytesRead;
+                        System.out.println("bytesRead");
+                        System.out.println(bytesRead);
+                    }
+                    totalSize += entrySize;
+                }
+            }
+            System.out.println("Total size: " + totalSize);
+        } catch (IOException e) {
+            throw new FileReadException("Failed to read file from archive: " + archive.getOriginalFilename(), e);
+        }
+        return totalSize;
+    }
 
 
 
