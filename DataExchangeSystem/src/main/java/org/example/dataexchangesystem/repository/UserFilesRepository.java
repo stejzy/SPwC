@@ -17,6 +17,7 @@ public interface UserFilesRepository extends JpaRepository<UserFile, Long> {
     @Query("SELECT uf FROM UserFile uf WHERE uf.user = :user AND uf.blobName LIKE CONCAT(:baseFileName, '%')")
     List<UserFile> findByUserAndBlobBaseName(@Param("user") Users user, @Param("baseFileName") String baseFileName);
 
-
+    @Query("SELECT uf FROM UserFile uf WHERE uf.blobName LIKE %:baseFileName% ORDER BY uf.lastModification DESC")
+    List<UserFile> findLatestFilesByBaseName(@Param("baseFileName") String baseFileName);
 
 }
